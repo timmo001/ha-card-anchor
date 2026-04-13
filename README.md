@@ -44,4 +44,6 @@ type: custom:ha-card-anchor
 anchor: nas
 ```
 
-Open the dashboard with `#anchor_nas` appended to the URL to scroll to this marker. Existing query parameters are preserved, so links like `?more-info-entity-id=light.kitchen#anchor_nas` continue to work.
+Open the dashboard with `#anchor_nas` appended to the URL to scroll to this marker.
+
+**Incompatibility with `more-info-entity-id`:** Home Assistant opens the more-info dialog from the query string as soon as the Lovelace view loads, while this card intentionally scrolls to the anchor only after cards have settled. Using both in one URL (for example `?more-info-entity-id=script.reset_lights#anchor_lights`) means more-info appears immediately and the anchor scroll can still run afterward, so the two behaviors do not coordinate. Prefer separate links or open more-info after navigating without that query param.
