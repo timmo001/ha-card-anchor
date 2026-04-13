@@ -91,13 +91,12 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
 
     return html`
       <ha-card>
-        <div class="container">
-          <p class="title">${CARD_NAME_FRIENDLY}</p>
-          <p class="value">
+        <div class="preview-line">
+          <span class="preview-hash">
             ${anchorId
               ? `#${anchorId}`
               : "Set an anchor key in the card editor"}
-          </p>
+          </span>
         </div>
       </ha-card>
     `;
@@ -179,33 +178,33 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
         }
 
         ha-card {
+          --ha-card-padding: 0;
           border: 1px dashed var(--divider-color, rgba(0, 0, 0, 0.12));
           box-shadow: none;
           background: none;
         }
 
-        .container {
-          padding: 16px;
+        .preview-line {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          box-sizing: border-box;
+          padding: 6px 10px;
+          min-height: 0;
         }
 
-        p {
+        .preview-hash {
+          flex: 1 1 auto;
           margin: 0;
-        }
-
-        .title {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          line-height: 1.4;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-        }
-
-        .value {
+          min-width: 0;
           font-family: var(--code-font-family, monospace);
-          font-size: 14px;
-          line-height: 1.6;
-          margin-top: 4px;
-          overflow-wrap: anywhere;
+          font-size: 13px;
+          line-height: 1.25;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
       `,
     ];
