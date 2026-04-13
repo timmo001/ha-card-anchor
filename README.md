@@ -49,9 +49,10 @@ Open the dashboard with `#anchor_nas` appended to the URL to scroll to this mark
 **More-info after scroll:** Use the anchor-prefixed query params (Home Assistant does not handle these; this card does after the anchor is aligned):
 
 - `anchor-more-info-entity-id` — entity to open in more-info (same idea as core `more-info-entity-id`)
-- `anchor-more-info-view` — optional; same idea as core `more-info-view`
+- `anchor-more-info-view` — optional; same idea as core `more-info-view` (e.g. `history` for the History tab, `info` for the default)
 
-Example: `?anchor-more-info-entity-id=script.reset_lights#anchor_lights`
+Example (scroll to anchor, then open more-info on **History**):  
+`?anchor-more-info-entity-id=script.reset_lights&anchor-more-info-view=history#anchor_lights`
 
 The card dispatches `hass-more-info` on `<home-assistant>` (same listener as the rest of the UI; see `more-info-mixin` in the Home Assistant frontend).
 
