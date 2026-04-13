@@ -153,25 +153,28 @@ export class HaCardAnchorEditor extends LitElement {
     return url.toString();
   }
 
-  private _selectInput(ev: Event): void {
-    const el = ev.currentTarget as HTMLInputElement | HTMLTextAreaElement;
-    el.select();
+  private _selectHaTextarea(ev: Event): void {
+    const el = ev.currentTarget as HTMLElement & { select?: () => void };
+    el.select?.();
   }
 
+  /**
+   * Uses {@link https://github.com/home-assistant/frontend/blob/dev/src/components/ha-textarea.ts | ha-textarea}
+   * (Lovelace styling). No outer `ha-card` so link rows are not double-framed next to the field chrome.
+   * Multiline is for long URLs that wrap; a single-line `ha-textfield` would not.
+   */
   private _renderLinkRow(title: string, value: string) {
     return html`
-      <div class="link-url-box">
-        <div class="link-row">
-          <span class="link-row__title">${title}</span>
-          <textarea
-            readonly
-            class="link-row__input"
-            rows="3"
-            .value=${value}
-            @focus=${this._selectInput}
-            @click=${this._selectInput}
-          ></textarea>
-        </div>
+      <div class="link-url-row">
+        <div class="link-url-row__title">${title}</div>
+        <ha-textarea
+          readonly
+          resize="vertical"
+          .rows=${3}
+          .value=${value}
+          @focus=${this._selectHaTextarea}
+          @click=${this._selectHaTextarea}
+        ></ha-textarea>
       </div>
     `;
   }
@@ -234,41 +237,25 @@ export class HaCardAnchorEditor extends LitElement {
           font-size: 0.92em;
         }
 
-        .link-url-box {
-          box-sizing: border-box;
-          border: var(--ha-card-border-width, 1px) solid
-            var(--ha-card-border-color, var(--divider-color));
-          border-radius: var(--ha-card-border-radius, 12px);
-          padding: 12px;
-          background: var(
-            --ha-card-background,
-            var(--card-background-color, var(--secondary-background-color))
-          );
-          box-shadow: var(--ha-card-box-shadow, none);
-        }
-
-        .link-row {
+        .link-url-row {
           display: flex;
           flex-direction: column;
           gap: 8px;
         }
 
-        .link-row__title {
-          font-size: 13px;
+        .link-url-row__title {
+          font-size: var(--ha-font-size-m);
+          font-weight: var(--ha-font-weight-medium);
           color: var(--primary-text-color);
         }
 
-        .link-row__input {
+        .link-url-row ha-textarea {
+          display: block;
           width: 100%;
-          box-sizing: border-box;
-          padding: 12px;
-          border: 1px solid var(--divider-color);
-          border-radius: 8px;
-          font: inherit;
-          font-size: 13px;
-          line-height: 1.45;
-          resize: vertical;
-          min-height: 3.5rem;
+        }
+
+        /* Long URLs: wrap inside the inner control (re-exported part from ha-textarea). */
+        .link-url-row ha-textarea::part(textarea) {
           overflow-wrap: anywhere;
           word-break: break-word;
           white-space: pre-wrap;
