@@ -48,6 +48,11 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
   /** Hash we already scrolled for; reset on hashchange or anchor id change (native anchor scrolls once per navigation). */
   private _lastScrolledHash: string | null = null;
 
+  /** hui-root restores window scroll after navigation; retry after those frames so we scroll last. */
+  private _lovelaceScrollRetryTimeouts: ReturnType<typeof setTimeout>[] = [];
+
+  private _lovelaceScrollRetryGen = 0;
+
   public setConfig(config: AnchorCardConfig): void {
     const normalizedConfig = normalizeAnchorCardConfig(config);
     assert(normalizedConfig, anchorCardConfigStruct);
@@ -59,18 +64,22 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     this._config = normalizedConfig;
     this._applyAnchorId();
     this._scheduleAnchorScroll();
+    this._scheduleLovelaceScrollRetries();
   }
 
   public connectedCallback(): void {
     super.connectedCallback();
     window.addEventListener("hashchange", this._handleHashChange);
     this._scheduleAnchorScroll();
+    this._scheduleLovelaceScrollRetries();
   }
 
   public disconnectedCallback(): void {
     super.disconnectedCallback();
     window.removeEventListener("hashchange", this._handleHashChange);
     this._scrollToken++;
+    this._lovelaceScrollRetryGen++;
+    this._clearLovelaceScrollRetries();
     this._lastScrolledHash = null;
   }
 
@@ -113,6 +122,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
   private _handleHashChange = () => {
     this._lastScrolledHash = null;
     this._scheduleAnchorScroll();
+    this._scheduleLovelaceScrollRetries();
   };
 
   private _applyAnchorId(): void {
@@ -124,6 +134,53 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     }
 
     this.removeAttribute("id");
+  }
+
+  private _clearLovelaceScrollRetries(): void {
+    for (const id of this._lovelaceScrollRetryTimeouts) {
+      window.clearTimeout(id);
+    }
+    this._lovelaceScrollRetryTimeouts = [];
+  }
+
+  /**
+   * Lovelace `hui-root` runs `scrollTo` after the view mounts (restores per-view scroll). That can run
+   * after our first `scrollIntoView` and leave the viewport at the top. Re-run only if still misaligned.
+   */
+  private _scheduleLovelaceScrollRetries(): void {
+    const anchorId = computeAnchorId(this._config?.anchor);
+    const hash = window.location.hash;
+
+    if (!anchorId || hash !== `#${anchorId}`) {
+      return;
+    }
+
+    this._clearLovelaceScrollRetries();
+    const gen = ++this._lovelaceScrollRetryGen;
+    const delays = [80, 280, 550];
+
+    for (const ms of delays) {
+      const id = window.setTimeout(() => {
+        if (gen !== this._lovelaceScrollRetryGen) {
+          return;
+        }
+        if (window.location.hash !== `#${anchorId}` || this.id !== anchorId) {
+          return;
+        }
+
+        const marginTop = parseFloat(getComputedStyle(this).scrollMarginTop) || 0;
+        const top = this.getBoundingClientRect().top;
+
+        if (Math.abs(top - marginTop) < 24) {
+          return;
+        }
+
+        this._lastScrolledHash = null;
+        this._scheduleAnchorScroll();
+      }, ms);
+
+      this._lovelaceScrollRetryTimeouts.push(id);
+    }
   }
 
   private _scheduleAnchorScroll(): void {
@@ -165,7 +222,9 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
         block: "start",
       });
 
-      const aligned = Math.abs(this.getBoundingClientRect().top) < 4;
+      const marginTop = parseFloat(getComputedStyle(this).scrollMarginTop) || 0;
+      const top = this.getBoundingClientRect().top;
+      const aligned = Math.abs(top - marginTop) < 16;
 
       if (aligned || attempt >= 5) {
         if (
@@ -191,7 +250,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
           display: block;
           height: 0;
           overflow: hidden;
-          scroll-margin-top: 16px;
+          scroll-margin-top: 100px;
         }
 
         :host([preview]) {
