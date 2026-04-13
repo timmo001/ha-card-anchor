@@ -99,6 +99,7 @@ export class HaCardAnchorEditor extends LitElement {
 
     const url = new URL(window.location.href);
     url.hash = anchorId;
+    url.searchParams.delete("edit");
 
     return url.toString();
   }
