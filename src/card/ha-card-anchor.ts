@@ -16,6 +16,10 @@ import {
   CARD_NAME_FRIENDLY,
 } from "./const";
 import {
+  ANCHOR_MORE_INFO_ENTITY_PARAM,
+  ANCHOR_MORE_INFO_VIEW_PARAM,
+} from "./anchor-query-params";
+import {
   AnchorCardConfig,
   anchorCardConfigStruct,
   computeAnchorId,
@@ -38,13 +42,6 @@ const CARD_SETTLE_QUIET_MS = 500;
 
 /** If no `card-updated` (empty view, etc.), scroll anyway. */
 const CARD_SETTLE_FALLBACK_MS = 3500;
-
-/**
- * Open more-info after anchor scroll (core HA ignores these; they mirror `more-info-entity-id` /
- * `more-info-view` with an `anchor-` prefix).
- */
-const ANCHOR_MORE_INFO_ENTITY_PARAM = "anchor-more-info-entity-id";
-const ANCHOR_MORE_INFO_VIEW_PARAM = "anchor-more-info-view";
 
 /** Home Assistant `entity_id` characters (domain + at least one dot); not as strict as core validation. */
 const ENTITY_ID_LIKELY = /^[a-z0-9_.-]+$/i;

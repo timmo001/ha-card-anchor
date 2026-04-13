@@ -5,6 +5,10 @@ import { configElementStyle, HomeAssistant } from "../ha";
 import { HaFormSchema } from "../utils/form/ha-form";
 import { CARD_EDITOR_NAME, CARD_NAME } from "./const";
 import {
+  ANCHOR_MORE_INFO_ENTITY_PARAM,
+  ANCHOR_MORE_INFO_VIEW_PARAM,
+} from "./anchor-query-params";
+import {
   AnchorCardConfig,
   anchorCardConfigStruct,
   computeAnchorId,
@@ -16,8 +20,6 @@ export class HaCardAnchorEditor extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
   @state() private _config?: AnchorCardConfig;
-
-  @state() private _copyFeedback?: string;
 
   private _schema: readonly HaFormSchema[] = [
     {
@@ -40,6 +42,14 @@ export class HaCardAnchorEditor extends LitElement {
     }
 
     const fullUrl = this._computeFullUrl();
+    const exampleScrollOnly = this._buildExampleUrl({});
+    const exampleMoreInfo = this._buildExampleUrl({
+      entityId: "light.living_room",
+    });
+    const exampleHistory = this._buildExampleUrl({
+      entityId: "script.reset_lights",
+      view: "history",
+    });
 
     return html`
       <div class="container">
@@ -56,19 +66,32 @@ export class HaCardAnchorEditor extends LitElement {
         ></ha-form>
         ${fullUrl
           ? html`
-              <div class="copy-block">
-                <p class="copy-block__label">Full link</p>
-                <p class="copy-block__helper">
-                  Copy this URL to keep any current query parameters, including
-                  open more-info links, and add this anchor.
+              <div class="links-block">
+                <p class="links-block__label">Links</p>
+                <p class="links-block__helper">
+                  The first row keeps your current query string (and drops
+                  <code>edit</code> only). The other rows use a clean URL for
+                  this dashboard path. For more-info after scroll, use
+                  <code>anchor-more-info-*</code> params (not core
+                  <code>more-info-entity-id</code>). Replace sample entity ids;
+                  views include <code>history</code>, <code>info</code>,
+                  <code>settings</code>, <code>related</code>, etc.
                 </p>
-                <input readonly .value=${fullUrl} @focus=${this._selectInput} />
-                <button type="button" @click=${this._copyLink}>
-                  Copy link
-                </button>
-                ${this._copyFeedback
+                ${this._renderLinkRow("This page + anchor", fullUrl)}
+                ${exampleScrollOnly && exampleMoreInfo && exampleHistory
                   ? html`
-                      <p class="copy-block__feedback">${this._copyFeedback}</p>
+                      ${this._renderLinkRow(
+                        "Scroll to anchor only",
+                        exampleScrollOnly
+                      )}
+                      ${this._renderLinkRow(
+                        "After scroll, open more-info (default tab)",
+                        exampleMoreInfo
+                      )}
+                      ${this._renderLinkRow(
+                        "After scroll, open more-info on History",
+                        exampleHistory
+                      )}
                     `
                   : nothing}
               </div>
@@ -104,38 +127,53 @@ export class HaCardAnchorEditor extends LitElement {
     return url.toString();
   }
 
-  private _selectInput(ev: Event): void {
-    const input = ev.currentTarget as HTMLInputElement;
-    input.select();
+  /**
+   * Example URLs for this dashboard path (no preserved query); uses
+   * {@link ANCHOR_MORE_INFO_ENTITY_PARAM} / {@link ANCHOR_MORE_INFO_VIEW_PARAM}.
+   */
+  private _buildExampleUrl(options: {
+    entityId?: string;
+    view?: string;
+  }): string | undefined {
+    const anchorId = computeAnchorId(this._config?.anchor);
+    if (!anchorId) {
+      return undefined;
+    }
+
+    const url = new URL(
+      `${window.location.origin}${window.location.pathname}`
+    );
+    if (options.entityId) {
+      url.searchParams.set(ANCHOR_MORE_INFO_ENTITY_PARAM, options.entityId);
+    }
+    if (options.view) {
+      url.searchParams.set(ANCHOR_MORE_INFO_VIEW_PARAM, options.view);
+    }
+    url.hash = `#${anchorId}`;
+    return url.toString();
   }
 
-  private async _copyLink(): Promise<void> {
-    const fullUrl = this._computeFullUrl();
+  private _selectInput(ev: Event): void {
+    const el = ev.currentTarget as HTMLInputElement | HTMLTextAreaElement;
+    el.select();
+  }
 
-    if (!fullUrl) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(fullUrl);
-    } catch (_err) {
-      const textarea = document.createElement("textarea");
-      textarea.value = fullUrl;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-    }
-
-    this._copyFeedback = "Copied link to clipboard";
-    window.setTimeout(() => {
-      if (this._copyFeedback === "Copied link to clipboard") {
-        this._copyFeedback = undefined;
-      }
-    }, 2000);
+  private _renderLinkRow(title: string, value: string) {
+    return html`
+      <div class="link-url-box">
+        <div class="link-row">
+          <span class="link-row__title">${title}</span>
+          <textarea
+            readonly
+            class="link-row__input"
+            rows="3"
+            .value=${value}
+            @focus=${this._selectInput}
+            @click=${this._selectInput}
+          ></textarea>
+        </div>
+      </div>
+    `;
   }
 
   private _computeLabelCallback = (schema: HaFormSchema) => {
@@ -174,47 +212,66 @@ export class HaCardAnchorEditor extends LitElement {
           display: block;
         }
 
-        .copy-block {
+        .links-block {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 16px;
         }
 
-        .copy-block__label,
-        .copy-block__helper,
-        .copy-block__feedback {
+        .links-block__label {
+          font-weight: 600;
           margin: 0;
         }
 
-        .copy-block__label {
-          font-weight: 600;
-        }
-
-        .copy-block__helper,
-        .copy-block__feedback {
+        .links-block__helper {
+          margin: 0;
           color: var(--secondary-text-color);
           font-size: 14px;
           line-height: 1.5;
         }
 
-        input {
+        .links-block code {
+          font-size: 0.92em;
+        }
+
+        .link-url-box {
+          box-sizing: border-box;
+          border: var(--ha-card-border-width, 1px) solid
+            var(--ha-card-border-color, var(--divider-color));
+          border-radius: var(--ha-card-border-radius, 12px);
+          padding: 12px;
+          background: var(
+            --ha-card-background,
+            var(--card-background-color, var(--secondary-background-color))
+          );
+          box-shadow: var(--ha-card-box-shadow, none);
+        }
+
+        .link-row {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .link-row__title {
+          font-size: 13px;
+          color: var(--primary-text-color);
+        }
+
+        .link-row__input {
           width: 100%;
           box-sizing: border-box;
           padding: 12px;
           border: 1px solid var(--divider-color);
           border-radius: 8px;
           font: inherit;
-        }
-
-        button {
-          align-self: flex-start;
-          padding: 10px 14px;
-          border: 1px solid var(--divider-color);
-          border-radius: 999px;
-          background: none;
-          color: inherit;
-          font: inherit;
-          cursor: pointer;
+          font-size: 13px;
+          line-height: 1.45;
+          resize: vertical;
+          min-height: 3.5rem;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+          white-space: pre-wrap;
         }
       `,
     ];
