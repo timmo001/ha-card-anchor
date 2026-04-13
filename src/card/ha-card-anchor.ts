@@ -423,7 +423,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
           display: block;
           height: 0;
           overflow: hidden;
-          scroll-margin-top: 60px;
+          scroll-margin-top: 80px;
         }
 
         :host([preview]) {
