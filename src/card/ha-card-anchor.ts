@@ -17,6 +17,23 @@ import {
   normalizeAnchorCardConfig,
 } from "./ha-card-anchor-config";
 
+/** Match scroll-margin vs getBoundingClientRect().top (px). */
+const SCROLL_ALIGN_TOLERANCE_PX = 16;
+
+/** Backoff: delay before recovery step `step` (0-based), capped. */
+const RECOVERY_BACKOFF_MS = (step: number): number =>
+  Math.min(Math.round(80 * 1.35 ** step), 2800);
+
+const RECOVERY_MAX_STEPS = 22;
+
+const LOCATION_CHANGED_DEBOUNCE_MS = 150;
+
+/** `hui-card` fires `card-updated` (bubbles, composed) when a card loads or upgrades; wait for quiet period. */
+const CARD_SETTLE_QUIET_MS = 500;
+
+/** If no `card-updated` (empty view, etc.), scroll anyway. */
+const CARD_SETTLE_FALLBACK_MS = 3500;
+
 registerCustomCard({
   type: CARD_NAME,
   name: CARD_NAME_FRIENDLY,
@@ -48,10 +65,17 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
   /** Hash we already scrolled for; reset on hashchange or anchor id change (native anchor scrolls once per navigation). */
   private _lastScrolledHash: string | null = null;
 
-  /** hui-root restores window scroll after navigation; retry after those frames so we scroll last. */
-  private _lovelaceScrollRetryTimeouts: ReturnType<typeof setTimeout>[] = [];
-
+  /** Cancels in-flight recovery when gen bumps (disconnect / new recovery run). */
   private _lovelaceScrollRetryGen = 0;
+
+  /** Single chain: exponential backoff until aligned or max steps. */
+  private _scrollRecoveryTimeoutId?: ReturnType<typeof setTimeout>;
+
+  private _locationChangedDebounceId?: ReturnType<typeof setTimeout>;
+
+  private _cardSettleDebounceId?: ReturnType<typeof setTimeout>;
+
+  private _cardSettleFallbackId?: ReturnType<typeof setTimeout>;
 
   public setConfig(config: AnchorCardConfig): void {
     const normalizedConfig = normalizeAnchorCardConfig(config);
@@ -63,23 +87,28 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     }
     this._config = normalizedConfig;
     this._applyAnchorId();
-    this._scheduleAnchorScroll();
-    this._scheduleLovelaceScrollRetries();
+    this._armDeferredHashScroll();
   }
 
   public connectedCallback(): void {
     super.connectedCallback();
     window.addEventListener("hashchange", this._handleHashChange);
-    this._scheduleAnchorScroll();
-    this._scheduleLovelaceScrollRetries();
+    window.addEventListener("location-changed", this._onHaLocationChanged);
+    window.addEventListener("card-updated", this._onLovelaceCardUpdated, true);
+    if (document.readyState !== "complete") {
+      window.addEventListener("load", this._onWindowLoad, { once: true });
+    }
+    this._armDeferredHashScroll();
   }
 
   public disconnectedCallback(): void {
     super.disconnectedCallback();
     window.removeEventListener("hashchange", this._handleHashChange);
+    window.removeEventListener("location-changed", this._onHaLocationChanged);
+    window.removeEventListener("card-updated", this._onLovelaceCardUpdated, true);
     this._scrollToken++;
     this._lovelaceScrollRetryGen++;
-    this._clearLovelaceScrollRetries();
+    this._clearPendingScrollTimers();
     this._lastScrolledHash = null;
   }
 
@@ -121,8 +150,49 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
 
   private _handleHashChange = () => {
     this._lastScrolledHash = null;
-    this._scheduleAnchorScroll();
-    this._scheduleLovelaceScrollRetries();
+    this._armDeferredHashScroll();
+  };
+
+  /** Home Assistant fires this on router / panel navigation (hui-root). */
+  private _onHaLocationChanged = (): void => {
+    if (this._locationChangedDebounceId !== undefined) {
+      window.clearTimeout(this._locationChangedDebounceId);
+    }
+    this._locationChangedDebounceId = window.setTimeout(() => {
+      this._locationChangedDebounceId = undefined;
+      this._maybeRetryScrollForLovelaceUi();
+    }, LOCATION_CHANGED_DEBOUNCE_MS);
+  };
+
+  private _onWindowLoad = (): void => {
+    this._armDeferredHashScroll();
+  };
+
+  /**
+   * Each `hui-card` dispatches `card-updated` when its inner card loads, lazy-upgrades (`ll-upgrade`),
+   * or rebuilds. Debounce: scroll only after {@link CARD_SETTLE_QUIET_MS} with no further updates
+   * so heavier cards finish layout first.
+   */
+  private _onLovelaceCardUpdated = (): void => {
+    const anchorId = computeAnchorId(this._config?.anchor);
+    if (!anchorId || window.location.hash !== `#${anchorId}`) {
+      return;
+    }
+
+    if (this._cardSettleDebounceId !== undefined) {
+      window.clearTimeout(this._cardSettleDebounceId);
+    }
+
+    this._cardSettleDebounceId = window.setTimeout(() => {
+      this._cardSettleDebounceId = undefined;
+
+      if (this._cardSettleFallbackId !== undefined) {
+        window.clearTimeout(this._cardSettleFallbackId);
+        this._cardSettleFallbackId = undefined;
+      }
+
+      this._executeHashScroll();
+    }, CARD_SETTLE_QUIET_MS);
   };
 
   private _applyAnchorId(): void {
@@ -136,51 +206,153 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     this.removeAttribute("id");
   }
 
-  private _clearLovelaceScrollRetries(): void {
-    for (const id of this._lovelaceScrollRetryTimeouts) {
-      window.clearTimeout(id);
+  private _isScrollAligned(anchorId: string): boolean {
+    if (this.id !== anchorId) {
+      return false;
     }
-    this._lovelaceScrollRetryTimeouts = [];
+    const marginTop = parseFloat(getComputedStyle(this).scrollMarginTop) || 0;
+    const top = this.getBoundingClientRect().top;
+    return Math.abs(top - marginTop) < SCROLL_ALIGN_TOLERANCE_PX;
+  }
+
+  private _clearPendingScrollTimers(): void {
+    if (this._scrollRecoveryTimeoutId !== undefined) {
+      window.clearTimeout(this._scrollRecoveryTimeoutId);
+      this._scrollRecoveryTimeoutId = undefined;
+    }
+    if (this._locationChangedDebounceId !== undefined) {
+      window.clearTimeout(this._locationChangedDebounceId);
+      this._locationChangedDebounceId = undefined;
+    }
+    if (this._cardSettleDebounceId !== undefined) {
+      window.clearTimeout(this._cardSettleDebounceId);
+      this._cardSettleDebounceId = undefined;
+    }
+    if (this._cardSettleFallbackId !== undefined) {
+      window.clearTimeout(this._cardSettleFallbackId);
+      this._cardSettleFallbackId = undefined;
+    }
   }
 
   /**
-   * Lovelace `hui-root` runs `scrollTo` after the view mounts (restores per-view scroll). That can run
-   * after our first `scrollIntoView` and leave the viewport at the top. Re-run only if still misaligned.
+   * Do not scroll on hash match until cards have had time to load (`card-updated` quiet window),
+   * or {@link CARD_SETTLE_FALLBACK_MS} elapses.
    */
-  private _scheduleLovelaceScrollRetries(): void {
+  private _armDeferredHashScroll(): void {
     const anchorId = computeAnchorId(this._config?.anchor);
     const hash = window.location.hash;
 
     if (!anchorId || hash !== `#${anchorId}`) {
+      if (this._cardSettleDebounceId !== undefined) {
+        window.clearTimeout(this._cardSettleDebounceId);
+        this._cardSettleDebounceId = undefined;
+      }
+      if (this._cardSettleFallbackId !== undefined) {
+        window.clearTimeout(this._cardSettleFallbackId);
+        this._cardSettleFallbackId = undefined;
+      }
       return;
     }
 
-    this._clearLovelaceScrollRetries();
-    const gen = ++this._lovelaceScrollRetryGen;
-    const delays = [80, 280, 550];
-
-    for (const ms of delays) {
-      const id = window.setTimeout(() => {
-        if (gen !== this._lovelaceScrollRetryGen) {
-          return;
-        }
-        if (window.location.hash !== `#${anchorId}` || this.id !== anchorId) {
-          return;
-        }
-
-        const marginTop = parseFloat(getComputedStyle(this).scrollMarginTop) || 0;
-        const top = this.getBoundingClientRect().top;
-
-        if (Math.abs(top - marginTop) < 24) {
-          return;
-        }
-
-        this._lastScrolledHash = null;
-        this._scheduleAnchorScroll();
-      }, ms);
-
-      this._lovelaceScrollRetryTimeouts.push(id);
+    if (this._cardSettleDebounceId !== undefined) {
+      window.clearTimeout(this._cardSettleDebounceId);
+      this._cardSettleDebounceId = undefined;
     }
+    if (this._cardSettleFallbackId !== undefined) {
+      window.clearTimeout(this._cardSettleFallbackId);
+      this._cardSettleFallbackId = undefined;
+    }
+
+    this._cardSettleFallbackId = window.setTimeout(() => {
+      this._cardSettleFallbackId = undefined;
+      this._executeHashScroll();
+    }, CARD_SETTLE_FALLBACK_MS);
+  }
+
+  private _executeHashScroll(): void {
+    const anchorId = computeAnchorId(this._config?.anchor);
+    if (!anchorId || window.location.hash !== `#${anchorId}`) {
+      return;
+    }
+    if (this._isScrollAligned(anchorId)) {
+      this._clearPendingScrollTimers();
+      return;
+    }
+    this._lastScrolledHash = null;
+    this._scheduleAnchorScroll();
+    this._startLovelaceScrollRecovery();
+  }
+
+  /**
+   * After HA navigation / full load, wait for cards again (same as initial hash open).
+   */
+  private _maybeRetryScrollForLovelaceUi(): void {
+    const anchorId = computeAnchorId(this._config?.anchor);
+    if (!anchorId || window.location.hash !== `#${anchorId}`) {
+      return;
+    }
+    if (this._isScrollAligned(anchorId)) {
+      this._clearPendingScrollTimers();
+      return;
+    }
+    this._armDeferredHashScroll();
+  }
+
+  /**
+   * `hui-root` restores `window` scroll after the view mounts; slow layouts can undo our first
+   * `scrollIntoView`. Prefer `location-changed` / `load`; otherwise exponential backoff until aligned
+   * or {@link RECOVERY_MAX_STEPS}. Timers stop as soon as {@link _isScrollAligned} is true.
+   */
+  private _startLovelaceScrollRecovery(): void {
+    const anchorId = computeAnchorId(this._config?.anchor);
+    const hash = window.location.hash;
+
+    if (!anchorId || hash !== `#${anchorId}`) {
+      if (this._scrollRecoveryTimeoutId !== undefined) {
+        window.clearTimeout(this._scrollRecoveryTimeoutId);
+        this._scrollRecoveryTimeoutId = undefined;
+      }
+      return;
+    }
+
+    if (this._scrollRecoveryTimeoutId !== undefined) {
+      window.clearTimeout(this._scrollRecoveryTimeoutId);
+      this._scrollRecoveryTimeoutId = undefined;
+    }
+    const gen = ++this._lovelaceScrollRetryGen;
+    this._scheduleRecoveryStep(anchorId, gen, 0);
+  }
+
+  private _scheduleRecoveryStep(
+    anchorId: string,
+    gen: number,
+    step: number
+  ): void {
+    if (step >= RECOVERY_MAX_STEPS) {
+      return;
+    }
+
+    const delay = RECOVERY_BACKOFF_MS(step);
+
+    this._scrollRecoveryTimeoutId = window.setTimeout(() => {
+      this._scrollRecoveryTimeoutId = undefined;
+
+      if (gen !== this._lovelaceScrollRetryGen) {
+        return;
+      }
+      if (window.location.hash !== `#${anchorId}` || this.id !== anchorId) {
+        return;
+      }
+
+      if (this._isScrollAligned(anchorId)) {
+        this._clearPendingScrollTimers();
+        return;
+      }
+
+      this._lastScrolledHash = null;
+      this._scheduleAnchorScroll();
+      this._scheduleRecoveryStep(anchorId, gen, step + 1);
+    }, delay);
   }
 
   private _scheduleAnchorScroll(): void {
@@ -222,11 +394,12 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
         block: "start",
       });
 
-      const marginTop = parseFloat(getComputedStyle(this).scrollMarginTop) || 0;
-      const top = this.getBoundingClientRect().top;
-      const aligned = Math.abs(top - marginTop) < 16;
+      const aligned = this._isScrollAligned(anchorId);
 
       if (aligned || attempt >= 5) {
+        if (aligned) {
+          this._clearPendingScrollTimers();
+        }
         if (
           token === this._scrollToken &&
           window.location.hash === `#${anchorId}`
@@ -250,7 +423,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
           display: block;
           height: 0;
           overflow: hidden;
-          scroll-margin-top: 100px;
+          scroll-margin-top: 60px;
         }
 
         :host([preview]) {
