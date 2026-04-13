@@ -45,9 +45,17 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
 
   private _scrollToken = 0;
 
+  /** Hash we already scrolled for; reset on hashchange or anchor id change (native anchor scrolls once per navigation). */
+  private _lastScrolledHash: string | null = null;
+
   public setConfig(config: AnchorCardConfig): void {
     const normalizedConfig = normalizeAnchorCardConfig(config);
     assert(normalizedConfig, anchorCardConfigStruct);
+    const nextAnchorId = computeAnchorId(normalizedConfig.anchor);
+    const prevAnchorId = computeAnchorId(this._config?.anchor);
+    if (nextAnchorId !== prevAnchorId) {
+      this._lastScrolledHash = null;
+    }
     this._config = normalizedConfig;
     this._applyAnchorId();
     this._scheduleAnchorScroll();
@@ -63,6 +71,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     super.disconnectedCallback();
     window.removeEventListener("hashchange", this._handleHashChange);
     this._scrollToken++;
+    this._lastScrolledHash = null;
   }
 
   public getCardSize(): number {
@@ -79,7 +88,6 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
 
   protected updated(): void {
     this._applyAnchorId();
-    this._scheduleAnchorScroll();
   }
 
   protected render() {
@@ -103,6 +111,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
   }
 
   private _handleHashChange = () => {
+    this._lastScrolledHash = null;
     this._scheduleAnchorScroll();
   };
 
@@ -119,12 +128,17 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
 
   private _scheduleAnchorScroll(): void {
     const anchorId = computeAnchorId(this._config?.anchor);
-    const token = ++this._scrollToken;
+    const hash = window.location.hash;
 
-    if (!anchorId || window.location.hash !== `#${anchorId}`) {
+    if (!anchorId || hash !== `#${anchorId}`) {
       return;
     }
 
+    if (this._lastScrolledHash === hash) {
+      return;
+    }
+
+    const token = ++this._scrollToken;
     this._attemptAnchorScroll(anchorId, token, 0);
   }
 
@@ -151,7 +165,15 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
         block: "start",
       });
 
-      if (attempt >= 5 || Math.abs(this.getBoundingClientRect().top) < 4) {
+      const aligned = Math.abs(this.getBoundingClientRect().top) < 4;
+
+      if (aligned || attempt >= 5) {
+        if (
+          token === this._scrollToken &&
+          window.location.hash === `#${anchorId}`
+        ) {
+          this._lastScrolledHash = window.location.hash;
+        }
         return;
       }
 
