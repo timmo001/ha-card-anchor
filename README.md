@@ -25,6 +25,16 @@ Since this card is not yet in the default HACS store, you need to add it as a cu
 2. Place it in your `config/www` folder
 3. Add the resource in your Lovelace dashboard
 
+### Publish to a running Home Assistant (SSH)
+
+Same pattern as `ha-dashboard-maintenance`: copy `.env.example` to `.env`, set `PUBLISH_TARGET` (and optional `PUBLISH_PORT`), then run:
+
+```bash
+pnpm publish-to-local
+```
+
+This builds, checks `dist/ha-card-anchor.js`, and rsyncs it to `/config/www/community/ha-card-anchor/` on the remote.
+
 ## Usage
 
 Add the card to your dashboard using the Lovelace UI editor or YAML:

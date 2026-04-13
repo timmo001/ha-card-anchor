@@ -6,7 +6,8 @@
   "scripts": {
     "start": "rolldown -c --watch",
     "build": "rolldown -c",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "publish-to-local": "bash ./scripts/publish-to-local.sh"
   },
   "author": {
     "name": "Aidan Timson",
