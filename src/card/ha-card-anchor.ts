@@ -1,7 +1,12 @@
 import { css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { assert } from "superstruct";
-import { HomeAssistant, LovelaceCard, LovelaceCardEditor } from "../ha";
+import {
+  fireEvent,
+  HomeAssistant,
+  LovelaceCard,
+  LovelaceCardEditor,
+} from "../ha";
 import { BaseElement } from "../utils/base-element";
 import { registerCustomCard } from "../utils/custom-cards";
 import {
@@ -33,6 +38,27 @@ const CARD_SETTLE_QUIET_MS = 500;
 
 /** If no `card-updated` (empty view, etc.), scroll anyway. */
 const CARD_SETTLE_FALLBACK_MS = 3500;
+
+/**
+ * Open more-info after anchor scroll (core HA ignores these; they mirror `more-info-entity-id` /
+ * `more-info-view` with an `anchor-` prefix).
+ */
+const ANCHOR_MORE_INFO_ENTITY_PARAM = "anchor-more-info-entity-id";
+const ANCHOR_MORE_INFO_VIEW_PARAM = "anchor-more-info-view";
+
+/** Home Assistant `entity_id` characters (domain + at least one dot); not as strict as core validation. */
+const ENTITY_ID_LIKELY = /^[a-z0-9_.-]+$/i;
+
+function isLikelyEntityId(value: string): boolean {
+  if (!value || !value.includes(".")) {
+    return false;
+  }
+  const parts = value.split(".");
+  if (parts.length < 2 || parts.some((p) => !p.length)) {
+    return false;
+  }
+  return ENTITY_ID_LIKELY.test(value);
+}
 
 registerCustomCard({
   type: CARD_NAME,
@@ -215,6 +241,45 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     return Math.abs(top - marginTop) < SCROLL_ALIGN_TOLERANCE_PX;
   }
 
+  /**
+   * If the URL includes {@link ANCHOR_MORE_INFO_ENTITY_PARAM}, fire `hass-more-info` once this
+   * anchor is aligned, then strip those query keys from the address bar.
+   */
+  private _maybeOpenMoreInfoAfterAnchorSettled(): void {
+    const anchorId = computeAnchorId(this._config?.anchor);
+    if (!anchorId || window.location.hash !== `#${anchorId}`) {
+      return;
+    }
+    if (!this._isScrollAligned(anchorId)) {
+      return;
+    }
+
+    let url: URL;
+    try {
+      url = new URL(window.location.href);
+    } catch {
+      return;
+    }
+
+    const entityId = url.searchParams.get(ANCHOR_MORE_INFO_ENTITY_PARAM);
+    if (!entityId || !isLikelyEntityId(entityId)) {
+      return;
+    }
+
+    const view = url.searchParams.get(ANCHOR_MORE_INFO_VIEW_PARAM) ?? undefined;
+    url.searchParams.delete(ANCHOR_MORE_INFO_ENTITY_PARAM);
+    url.searchParams.delete(ANCHOR_MORE_INFO_VIEW_PARAM);
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    history.replaceState(history.state, "", next);
+
+    // `MoreInfoMixin` listens on `<home-assistant>` (`../frontend/src/state/more-info-mixin.ts`).
+    const root = document.querySelector("home-assistant") as HTMLElement | null;
+    fireEvent(root ?? this, "hass-more-info", {
+      entityId,
+      ...(view !== undefined ? { view } : {}),
+    });
+  }
+
   private _clearPendingScrollTimers(): void {
     if (this._scrollRecoveryTimeoutId !== undefined) {
       window.clearTimeout(this._scrollRecoveryTimeoutId);
@@ -276,6 +341,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     }
     if (this._isScrollAligned(anchorId)) {
       this._clearPendingScrollTimers();
+      this._maybeOpenMoreInfoAfterAnchorSettled();
       return;
     }
     this._lastScrolledHash = null;
@@ -293,6 +359,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     }
     if (this._isScrollAligned(anchorId)) {
       this._clearPendingScrollTimers();
+      this._maybeOpenMoreInfoAfterAnchorSettled();
       return;
     }
     this._armDeferredHashScroll();
@@ -346,6 +413,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
 
       if (this._isScrollAligned(anchorId)) {
         this._clearPendingScrollTimers();
+        this._maybeOpenMoreInfoAfterAnchorSettled();
         return;
       }
 
@@ -399,6 +467,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
       if (aligned || attempt >= 5) {
         if (aligned) {
           this._clearPendingScrollTimers();
+          this._maybeOpenMoreInfoAfterAnchorSettled();
         }
         if (
           token === this._scrollToken &&

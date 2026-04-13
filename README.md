@@ -46,4 +46,13 @@ anchor: nas
 
 Open the dashboard with `#anchor_nas` appended to the URL to scroll to this marker.
 
-**Incompatibility with `more-info-entity-id`:** Home Assistant opens the more-info dialog from the query string as soon as the Lovelace view loads, while this card intentionally scrolls to the anchor only after cards have settled. Using both in one URL (for example `?more-info-entity-id=script.reset_lights#anchor_lights`) means more-info appears immediately and the anchor scroll can still run afterward, so the two behaviors do not coordinate. Prefer separate links or open more-info after navigating without that query param.
+**More-info after scroll:** Use the anchor-prefixed query params (Home Assistant does not handle these; this card does after the anchor is aligned):
+
+- `anchor-more-info-entity-id` — entity to open in more-info (same idea as core `more-info-entity-id`)
+- `anchor-more-info-view` — optional; same idea as core `more-info-view`
+
+Example: `?anchor-more-info-entity-id=script.reset_lights#anchor_lights`
+
+The card dispatches `hass-more-info` on `<home-assistant>` (same listener as the rest of the UI; see `more-info-mixin` in the Home Assistant frontend).
+
+**Do not use** core `more-info-entity-id` (or `more-info-view`) together with an anchor hash: the frontend opens that dialog immediately while this card defers scrolling until cards settle, so the behaviors clash. Use the `anchor-*` params above instead.

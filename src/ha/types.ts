@@ -45,6 +45,10 @@ declare global {
       value: unknown;
     };
     change: undefined;
+    "hass-more-info": {
+      entityId: string;
+      view?: string;
+    };
   }
 
   // For loading workers in webpack
