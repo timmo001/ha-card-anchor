@@ -57,7 +57,7 @@ declare global {
   }
 }
 
-export interface EntityRegistryDisplayEntry {
+interface EntityRegistryDisplayEntry {
   entity_id: string;
   name?: string;
   device_id?: string;
@@ -70,7 +70,7 @@ export interface EntityRegistryDisplayEntry {
   labels: string[];
 }
 
-export interface DeviceRegistryEntry {
+interface DeviceRegistryEntry {
   id: string;
   config_entries: string[];
   connections: Array<[string, string]>;
@@ -88,21 +88,21 @@ export interface DeviceRegistryEntry {
   configuration_url: string | null;
 }
 
-export interface AreaRegistryEntry {
+interface AreaRegistryEntry {
   area_id: string;
   name: string;
   picture: string | null;
   floor_id?: string;
 }
 
-export interface FloorRegistryEntry {
+interface FloorRegistryEntry {
   floor_id: string;
   name: string;
   level?: number;
   icon?: string;
 }
 
-export interface ThemeSettings {
+interface ThemeSettings {
   theme: string;
   // Radio box selection for theme picker. Do not use in Lovelace rendering as
   // it can be undefined == auto.
@@ -112,7 +112,7 @@ export interface ThemeSettings {
   accentColor?: string;
 }
 
-export interface PanelInfo<T = Record<string, any> | null> {
+interface PanelInfo<T = Record<string, any> | null> {
   component_name: string;
   config: T;
   icon: string | null;
@@ -120,39 +120,39 @@ export interface PanelInfo<T = Record<string, any> | null> {
   url_path: string;
 }
 
-export interface Panels {
+interface Panels {
   [name: string]: PanelInfo;
 }
 
-export interface Resources {
+interface Resources {
   [language: string]: Record<string, string>;
 }
 
-export interface Translation {
+interface Translation {
   nativeName: string;
   isRTL: boolean;
   hash: string;
 }
 
-export interface TranslationMetadata {
+interface TranslationMetadata {
   fragments: string[];
   translations: {
     [lang: string]: Translation;
   };
 }
 
-export interface Credential {
+interface Credential {
   auth_provider_type: string;
   auth_provider_id: string;
 }
 
-export interface MFAModule {
+interface MFAModule {
   id: string;
   name: string;
   enabled: boolean;
 }
 
-export interface CurrentUser {
+interface CurrentUser {
   id: string;
   is_owner: boolean;
   is_admin: boolean;
@@ -161,20 +161,20 @@ export interface CurrentUser {
   mfa_modules: MFAModule[];
 }
 
-export interface ServiceCallRequest {
+interface ServiceCallRequest {
   domain: string;
   service: string;
   serviceData?: Record<string, any>;
   target?: HassServiceTarget;
 }
 
-export interface Context {
+interface Context {
   id: string;
   parent_id?: string;
   user_id?: string | null;
 }
 
-export interface ServiceCallResponse {
+interface ServiceCallResponse {
   context: Context;
 }
 

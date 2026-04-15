@@ -1,1 +1,3 @@
-export type LocalizeFunc = (key: string, ...args: any[]) => string;
+type LocalizeFunc = (key: string, ...args: any[]) => string;
+
+export type { LocalizeFunc };

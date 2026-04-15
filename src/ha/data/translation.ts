@@ -1,4 +1,4 @@
-export enum NumberFormat {
+enum NumberFormat {
   auto = "auto",
   numeric = "numeric",
   scientific = "scientific",
@@ -10,12 +10,12 @@ export enum NumberFormat {
   none = "none",
 }
 
-export enum TimeZone {
+enum TimeZone {
   local = "local",
   server = "server",
 }
 
-export interface FrontendLocaleData {
+interface FrontendLocaleData {
   language: string;
   number_format: NumberFormat;
   time_format: "24" | "12" | "system";
@@ -23,4 +23,7 @@ export interface FrontendLocaleData {
   time_zone: TimeZone;
 }
 
-export type TranslationCategory = string;
+type TranslationCategory = string;
+
+export { NumberFormat, TimeZone };
+export type { FrontendLocaleData, TranslationCategory };

@@ -7,3 +7,4 @@ export type {
   LovelaceCardConfig,
   ActionConfig,
 } from "./types";
+export type { ValidHassDomEvent } from "./common/dom/fire_event";

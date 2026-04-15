@@ -35,6 +35,8 @@ declare global {
 
 type ValidHassDomEvent = keyof HASSDomEvents;
 
+export type { ValidHassDomEvent };
+
 /**
  * Dispatches a custom event with an optional detail value.
  *
