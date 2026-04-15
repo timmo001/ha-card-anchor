@@ -8,7 +8,6 @@ import {
 } from "../ha";
 import { computeAppearance, AppearanceSharedConfig } from "./appearance";
 import { BaseElement } from "./base-element";
-import { computeInfoDisplay } from "./info";
 
 type EntitySharedConfig = {
   entity?: string;
