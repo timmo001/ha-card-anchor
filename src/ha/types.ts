@@ -243,8 +243,6 @@ export interface HomeAssistant {
   formatEntityAttributeName(stateObj: HassEntity, attribute: string): string;
 }
 
-export type Constructor<T = any> = new (...args: any[]) => T;
-
 // Lovelace interfaces needed by the card
 export interface LovelaceCardConfig {
   type: string;
@@ -260,51 +258,8 @@ export interface LovelaceCardEditor extends HTMLElement {
   hass?: HomeAssistant;
 }
 
-export interface LovelaceGridOptions {
-  columns: number;
-  rows: number;
-  min_rows?: number;
-  min_columns?: number;
-}
-
-export interface LovelaceLayoutOptions {
-  grid_columns: number;
-  grid_rows: number;
-}
-
 // Additional Lovelace types
 export interface ActionConfig {
   action?: string;
-  [key: string]: any;
-}
-
-export interface LovelaceConfig {
-  views: Array<Record<string, any>>;
-  [key: string]: any;
-}
-
-export interface LovelaceBadgeConfig {
-  type: string;
-  [key: string]: any;
-}
-
-export interface LovelaceCardFeatureConfig {
-  type: string;
-  [key: string]: any;
-}
-
-export interface LovelaceViewConfig {
-  title?: string;
-  [key: string]: any;
-}
-
-export interface ShowViewConfig {
-  [key: string]: any;
-}
-
-export interface Condition {
-  condition: string;
-  entity?: string;
-  state?: string;
   [key: string]: any;
 }
