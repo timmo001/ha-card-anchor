@@ -1,11 +1,6 @@
 import { HassEntity } from "home-assistant-js-websocket";
 import { property, state } from "lit/decorators.js";
-import {
-  HomeAssistant,
-  isActive,
-  LovelaceGridOptions,
-  LovelaceLayoutOptions,
-} from "../ha";
+import { isActive, LovelaceGridOptions, LovelaceLayoutOptions } from "../ha";
 import { computeAppearance, AppearanceSharedConfig } from "./appearance";
 import { BaseElement } from "./base-element";
 
@@ -17,10 +12,6 @@ type EntitySharedConfig = {
 
 type BaseConfig = EntitySharedConfig & AppearanceSharedConfig;
 
-export function computeDarkMode(hass?: HomeAssistant): boolean {
-  if (!hass) return false;
-  return (hass.themes as any).darkMode as boolean;
-}
 export class BaseCard<
   T extends BaseConfig = BaseConfig,
   E extends HassEntity = HassEntity,
