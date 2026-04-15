@@ -5,7 +5,7 @@ import { animations } from "../utils/entity-styles";
 import { defaultColorCss, defaultDarkColorCss } from "./colors";
 import { themeColorCss, themeVariables } from "./theme";
 
-export function computeDarkMode(hass?: HomeAssistant): boolean {
+function computeDarkMode(hass?: HomeAssistant): boolean {
   if (!hass) return false;
   return (hass.themes as any).darkMode as boolean;
 }

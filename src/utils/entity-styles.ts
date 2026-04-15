@@ -88,20 +88,6 @@ const strAnimations = {
     }`,
 };
 
-export const animation = {
-  pulse: css`
-    ${unsafeCSS(strAnimations.pulse)}
-  `,
-  spin: css`
-    ${unsafeCSS(strAnimations.spin)}
-  `,
-  cleaning: css`
-    ${unsafeCSS(strAnimations.cleaning)}
-  `,
-  returning: css`
-    ${unsafeCSS(strAnimations.returning)}
-  `,
-};
 export const animations = css`
   ${unsafeCSS(Object.values(strAnimations).join("\n"))}
 `;

@@ -13,7 +13,7 @@ export const anchorCardConfigStruct = assign(
   })
 );
 
-export const normalizeAnchorKey = (value?: string): string | undefined => {
+const normalizeAnchorKey = (value?: string): string | undefined => {
   if (!value?.trim()) {
     return undefined;
   }

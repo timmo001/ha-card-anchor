@@ -140,9 +140,7 @@ export class HaCardAnchorEditor extends LitElement {
       return undefined;
     }
 
-    const url = new URL(
-      `${window.location.origin}${window.location.pathname}`
-    );
+    const url = new URL(`${window.location.origin}${window.location.pathname}`);
     if (options.entityId) {
       url.searchParams.set(ANCHOR_MORE_INFO_ENTITY_PARAM, options.entityId);
     }

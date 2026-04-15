@@ -128,7 +128,11 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     super.disconnectedCallback();
     window.removeEventListener("hashchange", this._handleHashChange);
     window.removeEventListener("location-changed", this._onHaLocationChanged);
-    window.removeEventListener("card-updated", this._onLovelaceCardUpdated, true);
+    window.removeEventListener(
+      "card-updated",
+      this._onLovelaceCardUpdated,
+      true
+    );
     this._scrollToken++;
     this._lovelaceScrollRetryGen++;
     this._clearPendingScrollTimers();
