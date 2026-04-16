@@ -5,6 +5,10 @@ A custom Home Assistant card for creating stable in-page anchor targets in a das
 > [!WARNING]
 > This card is experimental, breaking changes may occur.
 
+<img width="556" height="173" alt="image" src="https://github.com/user-attachments/assets/8294599a-3df1-4a3a-b5b8-7a20f93b5c24" />
+
+<img width="1478" height="1361" alt="image" src="https://github.com/user-attachments/assets/dbb71f91-9822-4ac7-aed9-de798dc099d4" />
+
 ## Installation
 
 ### HACS (Recommended)
