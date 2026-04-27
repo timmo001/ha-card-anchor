@@ -16,7 +16,7 @@ import {
 } from "./ha-card-anchor-config";
 
 @customElement(CARD_EDITOR_NAME)
-export class HaCardAnchorEditor extends LitElement {
+class HaCardAnchorEditor extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
   @state() private _config?: AnchorCardConfig;

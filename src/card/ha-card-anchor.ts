@@ -247,11 +247,8 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
    * anchor is aligned, then strip those query keys from the address bar.
    */
   private _maybeOpenMoreInfoAfterAnchorSettled(): void {
-    const anchorId = computeAnchorId(this._config?.anchor);
-    if (!anchorId || window.location.hash !== `#${anchorId}`) {
-      return;
-    }
-    if (!this._isScrollAligned(anchorId)) {
+    const anchorId = this._liveAnchorId();
+    if (!anchorId || !this._isScrollAligned(anchorId)) {
       return;
     }
 
@@ -282,22 +279,54 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
   }
 
   private _clearPendingScrollTimers(): void {
-    if (this._scrollRecoveryTimeoutId !== undefined) {
-      window.clearTimeout(this._scrollRecoveryTimeoutId);
-      this._scrollRecoveryTimeoutId = undefined;
+    this._clearTimer("_scrollRecoveryTimeoutId");
+    this._clearTimer("_locationChangedDebounceId");
+    this._clearTimer("_cardSettleDebounceId");
+    this._clearTimer("_cardSettleFallbackId");
+  }
+
+  private _clearCardSettleTimers(): void {
+    this._clearTimer("_cardSettleDebounceId");
+    this._clearTimer("_cardSettleFallbackId");
+  }
+
+  private _clearTimer(
+    key:
+      | "_scrollRecoveryTimeoutId"
+      | "_locationChangedDebounceId"
+      | "_cardSettleDebounceId"
+      | "_cardSettleFallbackId"
+  ): void {
+    const id = this[key];
+    if (id !== undefined) {
+      window.clearTimeout(id);
+      this[key] = undefined;
     }
-    if (this._locationChangedDebounceId !== undefined) {
-      window.clearTimeout(this._locationChangedDebounceId);
-      this._locationChangedDebounceId = undefined;
+  }
+
+  /**
+   * Returns the live anchor id when the URL hash currently targets this card,
+   * otherwise `null`. Centralizes the `!anchorId || hash !== '#anchorId'` guard.
+   */
+  private _liveAnchorId(): string | null {
+    const anchorId = computeAnchorId(this._config?.anchor);
+    if (!anchorId || window.location.hash !== `#${anchorId}`) {
+      return null;
     }
-    if (this._cardSettleDebounceId !== undefined) {
-      window.clearTimeout(this._cardSettleDebounceId);
-      this._cardSettleDebounceId = undefined;
+    return anchorId;
+  }
+
+  /**
+   * If the anchor is already aligned, clear pending timers, fire the deferred
+   * more-info open, and signal the caller to short-circuit.
+   */
+  private _settleIfAligned(anchorId: string): boolean {
+    if (!this._isScrollAligned(anchorId)) {
+      return false;
     }
-    if (this._cardSettleFallbackId !== undefined) {
-      window.clearTimeout(this._cardSettleFallbackId);
-      this._cardSettleFallbackId = undefined;
-    }
+    this._clearPendingScrollTimers();
+    this._maybeOpenMoreInfoAfterAnchorSettled();
+    return true;
   }
 
   /**
@@ -305,29 +334,14 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
    * or {@link CARD_SETTLE_FALLBACK_MS} elapses.
    */
   private _armDeferredHashScroll(): void {
-    const anchorId = computeAnchorId(this._config?.anchor);
-    const hash = window.location.hash;
+    const anchorId = this._liveAnchorId();
 
-    if (!anchorId || hash !== `#${anchorId}`) {
-      if (this._cardSettleDebounceId !== undefined) {
-        window.clearTimeout(this._cardSettleDebounceId);
-        this._cardSettleDebounceId = undefined;
-      }
-      if (this._cardSettleFallbackId !== undefined) {
-        window.clearTimeout(this._cardSettleFallbackId);
-        this._cardSettleFallbackId = undefined;
-      }
+    if (!anchorId) {
+      this._clearCardSettleTimers();
       return;
     }
 
-    if (this._cardSettleDebounceId !== undefined) {
-      window.clearTimeout(this._cardSettleDebounceId);
-      this._cardSettleDebounceId = undefined;
-    }
-    if (this._cardSettleFallbackId !== undefined) {
-      window.clearTimeout(this._cardSettleFallbackId);
-      this._cardSettleFallbackId = undefined;
-    }
+    this._clearCardSettleTimers();
 
     this._cardSettleFallbackId = window.setTimeout(() => {
       this._cardSettleFallbackId = undefined;
@@ -336,13 +350,11 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
   }
 
   private _executeHashScroll(): void {
-    const anchorId = computeAnchorId(this._config?.anchor);
-    if (!anchorId || window.location.hash !== `#${anchorId}`) {
+    const anchorId = this._liveAnchorId();
+    if (!anchorId) {
       return;
     }
-    if (this._isScrollAligned(anchorId)) {
-      this._clearPendingScrollTimers();
-      this._maybeOpenMoreInfoAfterAnchorSettled();
+    if (this._settleIfAligned(anchorId)) {
       return;
     }
     this._lastScrolledHash = null;
@@ -354,13 +366,11 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
    * After HA navigation / full load, wait for cards again (same as initial hash open).
    */
   private _maybeRetryScrollForLovelaceUi(): void {
-    const anchorId = computeAnchorId(this._config?.anchor);
-    if (!anchorId || window.location.hash !== `#${anchorId}`) {
+    const anchorId = this._liveAnchorId();
+    if (!anchorId) {
       return;
     }
-    if (this._isScrollAligned(anchorId)) {
-      this._clearPendingScrollTimers();
-      this._maybeOpenMoreInfoAfterAnchorSettled();
+    if (this._settleIfAligned(anchorId)) {
       return;
     }
     this._armDeferredHashScroll();
@@ -372,21 +382,13 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
    * or {@link RECOVERY_MAX_STEPS}. Timers stop as soon as {@link _isScrollAligned} is true.
    */
   private _startLovelaceScrollRecovery(): void {
-    const anchorId = computeAnchorId(this._config?.anchor);
-    const hash = window.location.hash;
+    const anchorId = this._liveAnchorId();
 
-    if (!anchorId || hash !== `#${anchorId}`) {
-      if (this._scrollRecoveryTimeoutId !== undefined) {
-        window.clearTimeout(this._scrollRecoveryTimeoutId);
-        this._scrollRecoveryTimeoutId = undefined;
-      }
+    this._clearTimer("_scrollRecoveryTimeoutId");
+    if (!anchorId) {
       return;
     }
 
-    if (this._scrollRecoveryTimeoutId !== undefined) {
-      window.clearTimeout(this._scrollRecoveryTimeoutId);
-      this._scrollRecoveryTimeoutId = undefined;
-    }
     const gen = ++this._lovelaceScrollRetryGen;
     this._scheduleRecoveryStep(anchorId, gen, 0);
   }
@@ -412,9 +414,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
         return;
       }
 
-      if (this._isScrollAligned(anchorId)) {
-        this._clearPendingScrollTimers();
-        this._maybeOpenMoreInfoAfterAnchorSettled();
+      if (this._settleIfAligned(anchorId)) {
         return;
       }
 
@@ -425,14 +425,12 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
   }
 
   private _scheduleAnchorScroll(): void {
-    const anchorId = computeAnchorId(this._config?.anchor);
-    const hash = window.location.hash;
-
-    if (!anchorId || hash !== `#${anchorId}`) {
+    const anchorId = this._liveAnchorId();
+    if (!anchorId) {
       return;
     }
 
-    if (this._lastScrolledHash === hash) {
+    if (this._lastScrolledHash === window.location.hash) {
       return;
     }
 

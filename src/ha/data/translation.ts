@@ -25,5 +25,4 @@ interface FrontendLocaleData {
 
 type TranslationCategory = string;
 
-export { NumberFormat, TimeZone };
 export type { FrontendLocaleData, TranslationCategory };
