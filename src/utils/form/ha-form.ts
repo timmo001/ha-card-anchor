@@ -114,9 +114,7 @@ export type SchemaUnion<
   SchemaArray extends readonly HaFormSchema[],
   Schema = SchemaArray[number],
 > = Schema extends
-  | HaFormGridSchema
-  | HaFormExpandableSchema
-  | HaFormOptionalActionsSchema
+  HaFormGridSchema | HaFormExpandableSchema | HaFormOptionalActionsSchema
   ? SchemaUnion<Schema["schema"]> | Schema
   : Schema;
 
@@ -125,18 +123,22 @@ export type HaFormDataContainer = Record<string, HaFormData>;
 export type HaFormData =
   | HaFormStringData
   | HaFormIntegerData
-  | HaFormFloatData
   | HaFormBooleanData
-  | HaFormSelectData
   | HaFormMultiSelectData
   | HaFormTimeData;
 
 export type HaFormStringData = string;
+
 export type HaFormIntegerData = number;
+
 export type HaFormFloatData = number;
+
 export type HaFormBooleanData = boolean;
+
 export type HaFormSelectData = string;
+
 export type HaFormMultiSelectData = string[];
+
 export type HaFormTimeData = HaDurationData;
 
 export interface HaFormElement extends LitElement {

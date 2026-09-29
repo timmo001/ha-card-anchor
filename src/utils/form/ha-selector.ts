@@ -426,6 +426,7 @@ export interface TemplateSelector {
 export interface ThemeSelector {
   theme: { include_default?: boolean } | null;
 }
+
 export interface TimeSelector {
   time: { no_second?: boolean } | null;
 }

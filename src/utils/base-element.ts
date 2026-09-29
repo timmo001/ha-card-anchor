@@ -7,16 +7,20 @@ import { themeColorCss, themeVariables } from "./theme";
 
 function computeDarkMode(hass?: HomeAssistant): boolean {
   if (!hass) return false;
-  return (hass.themes as any).darkMode as boolean;
+
+  return hass.themes.darkMode;
 }
+
 export class BaseElement extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
 
   protected updated(changedProps: PropertyValues): void {
     super.updated(changedProps);
+
     if (changedProps.has("hass") && this.hass) {
       const currentDarkMode = computeDarkMode(changedProps.get("hass"));
       const newDarkMode = computeDarkMode(this.hass);
+
       if (currentDarkMode !== newDarkMode) {
         this.toggleAttribute("dark-mode", newDarkMode);
       }

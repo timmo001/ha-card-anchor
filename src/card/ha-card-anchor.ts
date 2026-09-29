@@ -50,10 +50,13 @@ function isLikelyEntityId(value: string): boolean {
   if (!value || !value.includes(".")) {
     return false;
   }
+
   const parts = value.split(".");
+
   if (parts.length < 2 || parts.some((p) => !p.length)) {
     return false;
   }
+
   return ENTITY_ID_LIKELY.test(value);
 }
 
@@ -67,7 +70,8 @@ registerCustomCard({
 export class HaCardAnchor extends BaseElement implements LovelaceCard {
   public static async getConfigElement(): Promise<LovelaceCardEditor> {
     await import("./ha-card-anchor-editor");
-    return document.createElement(CARD_EDITOR_NAME) as LovelaceCardEditor;
+
+    return document.createElement(CARD_EDITOR_NAME);
   }
 
   public static async getStubConfig(): Promise<AnchorCardConfig> {
@@ -105,9 +109,11 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     assert(normalizedConfig, anchorCardConfigStruct);
     const nextAnchorId = computeAnchorId(normalizedConfig.anchor);
     const prevAnchorId = computeAnchorId(this._config?.anchor);
+
     if (nextAnchorId !== prevAnchorId) {
       this._lastScrolledHash = null;
     }
+
     this._config = normalizedConfig;
     this._applyAnchorId();
     this._armDeferredHashScroll();
@@ -118,9 +124,11 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     window.addEventListener("hashchange", this._handleHashChange);
     window.addEventListener("location-changed", this._onHaLocationChanged);
     window.addEventListener("card-updated", this._onLovelaceCardUpdated, true);
+
     if (document.readyState !== "complete") {
       window.addEventListener("load", this._onWindowLoad, { once: true });
     }
+
     this._armDeferredHashScroll();
   }
 
@@ -166,9 +174,9 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
       <ha-card>
         <div class="preview-line">
           <span class="preview-hash">
-            ${anchorId
-              ? `#${anchorId}`
-              : "Set an anchor key in the card editor"}
+            ${
+              anchorId ? `#${anchorId}` : "Set an anchor key in the card editor"
+            }
           </span>
         </div>
       </ha-card>
@@ -185,6 +193,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     if (this._locationChangedDebounceId !== undefined) {
       window.clearTimeout(this._locationChangedDebounceId);
     }
+
     this._locationChangedDebounceId = window.setTimeout(() => {
       this._locationChangedDebounceId = undefined;
       this._maybeRetryScrollForLovelaceUi();
@@ -202,6 +211,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
    */
   private _onLovelaceCardUpdated = (): void => {
     const anchorId = computeAnchorId(this._config?.anchor);
+
     if (!anchorId || window.location.hash !== `#${anchorId}`) {
       return;
     }
@@ -227,6 +237,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
 
     if (anchorId) {
       this.id = anchorId;
+
       return;
     }
 
@@ -237,8 +248,10 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     if (this.id !== anchorId) {
       return false;
     }
+
     const marginTop = parseFloat(getComputedStyle(this).scrollMarginTop) || 0;
     const top = this.getBoundingClientRect().top;
+
     return Math.abs(top - marginTop) < SCROLL_ALIGN_TOLERANCE_PX;
   }
 
@@ -248,11 +261,13 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
    */
   private _maybeOpenMoreInfoAfterAnchorSettled(): void {
     const anchorId = this._liveAnchorId();
+
     if (!anchorId || !this._isScrollAligned(anchorId)) {
       return;
     }
 
     let url: URL;
+
     try {
       url = new URL(window.location.href);
     } catch {
@@ -260,6 +275,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     }
 
     const entityId = url.searchParams.get(ANCHOR_MORE_INFO_ENTITY_PARAM);
+
     if (!entityId || !isLikelyEntityId(entityId)) {
       return;
     }
@@ -271,11 +287,14 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     history.replaceState(history.state, "", next);
 
     // `MoreInfoMixin` listens on `<home-assistant>` (`../frontend/src/state/more-info-mixin.ts`).
-    const root = document.querySelector("home-assistant") as HTMLElement | null;
-    fireEvent(root ?? this, "hass-more-info", {
-      entityId,
-      ...(view !== undefined ? { view } : {}),
-    });
+    const root = document.querySelector<HTMLElement>("home-assistant");
+    const detail: HASSDomEvents["hass-more-info"] = { entityId };
+
+    if (view !== undefined) {
+      detail.view = view;
+    }
+
+    fireEvent(root ?? this, "hass-more-info", detail);
   }
 
   private _clearPendingScrollTimers(): void {
@@ -298,6 +317,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
       | "_cardSettleFallbackId"
   ): void {
     const id = this[key];
+
     if (id !== undefined) {
       window.clearTimeout(id);
       this[key] = undefined;
@@ -310,9 +330,11 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
    */
   private _liveAnchorId(): string | null {
     const anchorId = computeAnchorId(this._config?.anchor);
+
     if (!anchorId || window.location.hash !== `#${anchorId}`) {
       return null;
     }
+
     return anchorId;
   }
 
@@ -324,8 +346,10 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     if (!this._isScrollAligned(anchorId)) {
       return false;
     }
+
     this._clearPendingScrollTimers();
     this._maybeOpenMoreInfoAfterAnchorSettled();
+
     return true;
   }
 
@@ -338,6 +362,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
 
     if (!anchorId) {
       this._clearCardSettleTimers();
+
       return;
     }
 
@@ -351,12 +376,15 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
 
   private _executeHashScroll(): void {
     const anchorId = this._liveAnchorId();
+
     if (!anchorId) {
       return;
     }
+
     if (this._settleIfAligned(anchorId)) {
       return;
     }
+
     this._lastScrolledHash = null;
     this._scheduleAnchorScroll();
     this._startLovelaceScrollRecovery();
@@ -367,12 +395,15 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
    */
   private _maybeRetryScrollForLovelaceUi(): void {
     const anchorId = this._liveAnchorId();
+
     if (!anchorId) {
       return;
     }
+
     if (this._settleIfAligned(anchorId)) {
       return;
     }
+
     this._armDeferredHashScroll();
   }
 
@@ -385,6 +416,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     const anchorId = this._liveAnchorId();
 
     this._clearTimer("_scrollRecoveryTimeoutId");
+
     if (!anchorId) {
       return;
     }
@@ -410,6 +442,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
       if (gen !== this._lovelaceScrollRetryGen) {
         return;
       }
+
       if (window.location.hash !== `#${anchorId}` || this.id !== anchorId) {
         return;
       }
@@ -426,6 +459,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
 
   private _scheduleAnchorScroll(): void {
     const anchorId = this._liveAnchorId();
+
     if (!anchorId) {
       return;
     }
@@ -468,12 +502,14 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
           this._clearPendingScrollTimers();
           this._maybeOpenMoreInfoAfterAnchorSettled();
         }
+
         if (
           token === this._scrollToken &&
           window.location.hash === `#${anchorId}`
         ) {
           this._lastScrolledHash = window.location.hash;
         }
+
         return;
       }
 

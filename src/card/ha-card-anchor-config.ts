@@ -43,6 +43,7 @@ export const normalizeAnchorCardConfig = (
 
   if (!anchor) {
     const { anchor: _anchor, ...rest } = config;
+
     return rest;
   }
 

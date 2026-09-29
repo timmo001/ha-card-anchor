@@ -15,6 +15,12 @@ import {
   normalizeAnchorCardConfig,
 } from "./ha-card-anchor-config";
 
+declare global {
+  interface HTMLElementTagNameMap {
+    [CARD_EDITOR_NAME]: HaCardAnchorEditor;
+  }
+}
+
 @customElement(CARD_EDITOR_NAME)
 class HaCardAnchorEditor extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
@@ -43,9 +49,11 @@ class HaCardAnchorEditor extends LitElement {
 
     const fullUrl = this._computeFullUrl();
     const exampleScrollOnly = this._buildExampleUrl({});
+
     const exampleMoreInfo = this._buildExampleUrl({
       entityId: "light.living_room",
     });
+
     const exampleHistory = this._buildExampleUrl({
       entityId: "script.reset_lights",
       view: "history",
@@ -64,44 +72,48 @@ class HaCardAnchorEditor extends LitElement {
           .computeHelper=${this._computeHelperCallback}
           @value-changed=${this._valueChanged}
         ></ha-form>
-        ${fullUrl
-          ? html`
-              <div class="links-block">
-                <p class="links-block__label">Links</p>
-                <p class="links-block__helper">
-                  The first row keeps your current query string (and drops
-                  <code>edit</code> only). The other rows use a clean URL for
-                  this dashboard path. For more-info after scroll, use
-                  <code>anchor-more-info-*</code> params (not core
-                  <code>more-info-entity-id</code>). Replace sample entity ids;
-                  views include <code>history</code>, <code>info</code>,
-                  <code>settings</code>, <code>related</code>, etc.
-                </p>
-                ${this._renderLinkRow("This page + anchor", fullUrl)}
-                ${exampleScrollOnly && exampleMoreInfo && exampleHistory
-                  ? html`
-                      ${this._renderLinkRow(
-                        "Scroll to anchor only",
-                        exampleScrollOnly
-                      )}
-                      ${this._renderLinkRow(
-                        "After scroll, open more-info (default tab)",
-                        exampleMoreInfo
-                      )}
-                      ${this._renderLinkRow(
-                        "After scroll, open more-info on History",
-                        exampleHistory
-                      )}
-                    `
-                  : nothing}
-              </div>
-            `
-          : nothing}
+        ${
+          fullUrl
+            ? html`
+                <div class="links-block">
+                  <p class="links-block__label">Links</p>
+                  <p class="links-block__helper">
+                    The first row keeps your current query string (and drops
+                    <code>edit</code> only). The other rows use a clean URL for
+                    this dashboard path. For more-info after scroll, use
+                    <code>anchor-more-info-*</code> params (not core
+                    <code>more-info-entity-id</code>). Replace sample entity
+                    ids; views include <code>history</code>, <code>info</code>,
+                    <code>settings</code>, <code>related</code>, etc.
+                  </p>
+                  ${this._renderLinkRow("This page + anchor", fullUrl)}
+                  ${
+                    exampleScrollOnly && exampleMoreInfo && exampleHistory
+                      ? html`
+                          ${this._renderLinkRow(
+                            "Scroll to anchor only",
+                            exampleScrollOnly
+                          )}
+                          ${this._renderLinkRow(
+                            "After scroll, open more-info (default tab)",
+                            exampleMoreInfo
+                          )}
+                          ${this._renderLinkRow(
+                            "After scroll, open more-info on History",
+                            exampleHistory
+                          )}
+                        `
+                      : nothing
+                  }
+                </div>
+              `
+            : nothing
+        }
       </div>
     `;
   }
 
-  private _valueChanged(ev: CustomEvent): void {
+  private _valueChanged = (ev: CustomEvent): void => {
     const newConfig = normalizeAnchorCardConfig({
       ...(this._config || { type: `custom:${CARD_NAME}` }),
       ...ev.detail.value,
@@ -111,7 +123,7 @@ class HaCardAnchorEditor extends LitElement {
     this.dispatchEvent(
       new CustomEvent("config-changed", { detail: { config: newConfig } })
     );
-  }
+  };
 
   private _computeFullUrl(): string | undefined {
     const anchorId = computeAnchorId(this._config?.anchor);
@@ -136,25 +148,31 @@ class HaCardAnchorEditor extends LitElement {
     view?: string;
   }): string | undefined {
     const anchorId = computeAnchorId(this._config?.anchor);
+
     if (!anchorId) {
       return undefined;
     }
 
     const url = new URL(`${window.location.origin}${window.location.pathname}`);
+
     if (options.entityId) {
       url.searchParams.set(ANCHOR_MORE_INFO_ENTITY_PARAM, options.entityId);
     }
+
     if (options.view) {
       url.searchParams.set(ANCHOR_MORE_INFO_VIEW_PARAM, options.view);
     }
+
     url.hash = `#${anchorId}`;
+
     return url.toString();
   }
 
-  private _selectHaTextarea(ev: Event): void {
-    const el = ev.currentTarget as HTMLElement & { select?: () => void };
-    el.select?.();
-  }
+  private _selectHaTextarea = (
+    ev: Event & { currentTarget: HTMLElement & { select?: () => void } }
+  ): void => {
+    ev.currentTarget.select?.();
+  };
 
   /**
    * Uses {@link https://github.com/home-assistant/frontend/blob/dev/src/components/ha-textarea.ts | ha-textarea}

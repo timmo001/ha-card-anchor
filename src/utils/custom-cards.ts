@@ -5,14 +5,18 @@ interface RegisterCardParams {
   name: string;
   description: string;
 }
+
+declare global {
+  interface Window {
+    customCards?: unknown[];
+  }
+}
+
 export function registerCustomCard(params: RegisterCardParams) {
-  const windowWithCards = window as unknown as Window & {
-    customCards: unknown[];
-  };
-  windowWithCards.customCards = windowWithCards.customCards || [];
+  window.customCards = window.customCards || [];
 
   const cardPage = params.type.replace("-card", "");
-  windowWithCards.customCards.push({
+  window.customCards.push({
     ...params,
     preview: true,
     documentationURL: `${repository.url}/blob/main/docs/cards/${cardPage}.md`,
