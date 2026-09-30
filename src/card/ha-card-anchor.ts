@@ -287,14 +287,18 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     history.replaceState(history.state, "", next);
 
     // `MoreInfoMixin` listens on `<home-assistant>` (`../frontend/src/state/more-info-mixin.ts`).
-    const root = document.querySelector<HTMLElement>("home-assistant");
+    const root = document.querySelector("home-assistant");
     const detail: HASSDomEvents["hass-more-info"] = { entityId };
 
     if (view !== undefined) {
       detail.view = view;
     }
 
-    fireEvent(root ?? this, "hass-more-info", detail);
+    fireEvent(
+      root instanceof HTMLElement ? root : this,
+      "hass-more-info",
+      detail
+    );
   }
 
   private _clearPendingScrollTimers(): void {

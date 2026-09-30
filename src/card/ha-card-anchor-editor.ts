@@ -1,7 +1,7 @@
 import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { assert } from "superstruct";
-import { configElementStyle, HomeAssistant } from "../ha";
+import { configElementStyle, HASSDomEvent, HomeAssistant } from "../ha";
 import { HaFormSchema } from "../utils/form/ha-form";
 import { CARD_EDITOR_NAME, CARD_NAME } from "./const";
 import {
@@ -113,7 +113,9 @@ class HaCardAnchorEditor extends LitElement {
     `;
   }
 
-  private _valueChanged = (ev: CustomEvent): void => {
+  private _valueChanged = (
+    ev: HASSDomEvent<{ value: Partial<AnchorCardConfig> }>
+  ): void => {
     const newConfig = normalizeAnchorCardConfig({
       ...(this._config || { type: `custom:${CARD_NAME}` }),
       ...ev.detail.value,

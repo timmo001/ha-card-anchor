@@ -37,6 +37,10 @@ type ValidHassDomEvent = keyof HASSDomEvents;
 
 export type { ValidHassDomEvent };
 
+export interface HASSDomEvent<T> extends Event {
+  detail: T;
+}
+
 /**
  * Dispatches a custom event with an optional detail value.
  *

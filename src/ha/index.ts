@@ -10,4 +10,4 @@ export type {
   ActionConfig,
 } from "./types";
 
-export type { ValidHassDomEvent } from "./common/dom/fire_event";
+export type { HASSDomEvent, ValidHassDomEvent } from "./common/dom/fire_event";
