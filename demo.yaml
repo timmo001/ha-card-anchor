@@ -1,0 +1,107 @@
+# Live demo on https://timmo.dev/demos/ha-card-anchor, rendered with Home
+# Assistant's embed components against mocked entities. It's read from each
+# release, so it has to match that release's card.
+#
+# The anchor cards are invisible markers between the sections. The buttons add
+# an anchor's hash to the page's address, and that anchor card scrolls itself
+# into view.
+entities:
+  - entity_id: light.kitchen
+    state: "on"
+    attributes:
+      friendly_name: Kitchen
+      brightness: 200
+      color_mode: brightness
+      supported_color_modes:
+        - brightness
+  - entity_id: light.living_room
+    state: "off"
+    attributes:
+      friendly_name: Living room
+      color_mode: brightness
+      supported_color_modes:
+        - brightness
+  - entity_id: climate.living_room
+    state: heat
+    attributes:
+      friendly_name: Living room
+      current_temperature: 19.5
+      temperature: 21
+      min_temp: 7
+      max_temp: 30
+      target_temp_step: 0.5
+      hvac_modes:
+        - "off"
+        - heat
+      supported_features: 1
+  - entity_id: sensor.outside_temperature
+    state: "8.2"
+    attributes:
+      friendly_name: Outside
+      device_class: temperature
+      state_class: measurement
+      unit_of_measurement: °C
+  - entity_id: lock.front_door
+    state: locked
+    attributes:
+      friendly_name: Front door
+  - entity_id: binary_sensor.back_door
+    state: "off"
+    attributes:
+      friendly_name: Back door
+      device_class: door
+cards:
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: Lights
+        icon: mdi:lightbulb
+        show_state: false
+        icon_height: 32px
+        tap_action:
+          action: navigate
+          navigation_path: "#anchor_lights"
+      - type: button
+        name: Climate
+        icon: mdi:thermostat
+        show_state: false
+        icon_height: 32px
+        tap_action:
+          action: navigate
+          navigation_path: "#anchor_climate"
+      - type: button
+        name: Security
+        icon: mdi:shield-home
+        show_state: false
+        icon_height: 32px
+        tap_action:
+          action: navigate
+          navigation_path: "#anchor_security"
+  - type: custom:ha-card-anchor
+    anchor: lights
+  - type: heading
+    heading: Lights
+  - type: tile
+    entity: light.kitchen
+    features:
+      - type: light-brightness
+  - type: tile
+    entity: light.living_room
+  - type: custom:ha-card-anchor
+    anchor: climate
+  - type: heading
+    heading: Climate
+  - type: tile
+    entity: climate.living_room
+    features:
+      - type: target-temperature
+  - type: tile
+    entity: sensor.outside_temperature
+  - type: custom:ha-card-anchor
+    anchor: security
+  - type: heading
+    heading: Security
+  - type: tile
+    entity: lock.front_door
+  - type: tile
+    entity: binary_sensor.back_door
