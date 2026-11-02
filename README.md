@@ -9,6 +9,7 @@ A custom Home Assistant card for creating stable in-page anchor targets in a das
 
 <img width="1478" height="1361" alt="image" src="https://github.com/user-attachments/assets/dbb71f91-9822-4ac7-aed9-de798dc099d4" />
 
+<!-- ha-marketplace:exclude-start -->
 ## Installation
 
 ### HACS (Recommended)
@@ -38,6 +39,7 @@ pnpm publish-to-local
 ```
 
 This builds, checks `dist/ha-card-anchor.js`, and rsyncs it to `/config/www/community/ha-card-anchor/` on the remote.
+<!-- ha-marketplace:exclude-end -->
 
 ## Usage
 
