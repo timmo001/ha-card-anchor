@@ -2,9 +2,9 @@
 # Assistant's embed components against mocked entities. It's read from each
 # release, so it has to match that release's card.
 #
-# The anchor cards are invisible markers between the sections. The buttons add
-# an anchor's hash to the page's address, and that anchor card scrolls itself
-# into view.
+# Each section starts with an anchor card, an invisible marker, as on a
+# sections dashboard. The buttons in the first section add an anchor's hash to
+# the page's address, and that anchor card scrolls its section into view.
 entities:
   - entity_id: light.kitchen
     state: "on"
@@ -50,14 +50,17 @@ entities:
     attributes:
       friendly_name: Back door
       device_class: door
-cards:
-  - type: horizontal-stack
-    cards:
+sections:
+  - cards:
+      - type: heading
+        heading: Jump to
       - type: button
         name: Lights
         icon: mdi:lightbulb
         show_state: false
         icon_height: 32px
+        grid_options:
+          columns: 4
         tap_action:
           action: navigate
           navigation_path: "#anchor_lights"
@@ -66,6 +69,8 @@ cards:
         icon: mdi:thermostat
         show_state: false
         icon_height: 32px
+        grid_options:
+          columns: 4
         tap_action:
           action: navigate
           navigation_path: "#anchor_climate"
@@ -74,34 +79,39 @@ cards:
         icon: mdi:shield-home
         show_state: false
         icon_height: 32px
+        grid_options:
+          columns: 4
         tap_action:
           action: navigate
           navigation_path: "#anchor_security"
-  - type: custom:ha-card-anchor
-    anchor: lights
-  - type: heading
-    heading: Lights
-  - type: tile
-    entity: light.kitchen
-    features:
-      - type: light-brightness
-  - type: tile
-    entity: light.living_room
-  - type: custom:ha-card-anchor
-    anchor: climate
-  - type: heading
-    heading: Climate
-  - type: tile
-    entity: climate.living_room
-    features:
-      - type: target-temperature
-  - type: tile
-    entity: sensor.outside_temperature
-  - type: custom:ha-card-anchor
-    anchor: security
-  - type: heading
-    heading: Security
-  - type: tile
-    entity: lock.front_door
-  - type: tile
-    entity: binary_sensor.back_door
+  - cards:
+      - type: custom:ha-card-anchor
+        anchor: lights
+      - type: heading
+        heading: Lights
+      - type: tile
+        entity: light.kitchen
+        features:
+          - type: light-brightness
+      - type: tile
+        entity: light.living_room
+  - cards:
+      - type: custom:ha-card-anchor
+        anchor: climate
+      - type: heading
+        heading: Climate
+      - type: tile
+        entity: climate.living_room
+        features:
+          - type: target-temperature
+      - type: tile
+        entity: sensor.outside_temperature
+  - cards:
+      - type: custom:ha-card-anchor
+        anchor: security
+      - type: heading
+        heading: Security
+      - type: tile
+        entity: lock.front_door
+      - type: tile
+        entity: binary_sensor.back_door
