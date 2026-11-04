@@ -104,6 +104,9 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
 
   private _cardSettleFallbackId?: ReturnType<typeof setTimeout>;
 
+  /** When the card connected; after {@link CARD_SETTLE_FALLBACK_MS}, its view has settled. */
+  private _connectedAt = 0;
+
   public setConfig(config: AnchorCardConfig): void {
     const normalizedConfig = normalizeAnchorCardConfig(config);
     assert(normalizedConfig, anchorCardConfigStruct);
@@ -121,6 +124,7 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
 
   public connectedCallback(): void {
     super.connectedCallback();
+    this._connectedAt = Date.now();
     window.addEventListener("hashchange", this._handleHashChange);
     window.addEventListener("location-changed", this._onHaLocationChanged);
     window.addEventListener("card-updated", this._onLovelaceCardUpdated, true);
@@ -371,6 +375,14 @@ export class HaCardAnchor extends BaseElement implements LovelaceCard {
     }
 
     this._clearCardSettleTimers();
+
+    // A hash change on a view that has long settled, such as a click on a link
+    // to an anchor, has no cards left to wait for
+    if (Date.now() - this._connectedAt >= CARD_SETTLE_FALLBACK_MS) {
+      this._executeHashScroll();
+
+      return;
+    }
 
     this._cardSettleFallbackId = window.setTimeout(() => {
       this._cardSettleFallbackId = undefined;
