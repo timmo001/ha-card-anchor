@@ -1,1 +1,57 @@
-../opencode.json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permissions": [
+    {
+      "action": "external_directory",
+      "resource": "~/repos/home-assistant/**",
+      "effect": "allow"
+    },
+    {
+      "action": "gh.write *",
+      "resource": "gh_* timmo001/ha-card-anchor*",
+      "effect": "allow"
+    },
+    {
+      "action": "gh.write *",
+      "resource": "gh_*delete* timmo001/ha-card-anchor*",
+      "effect": "ask"
+    }
+  ],
+  "references": {
+    "core": {
+      "path": "/home/aidan/repos/home-assistant/core",
+      "description": "Home Assistant Core backend (Python): integrations, entity models, and the WebSocket and REST APIs the frontend calls"
+    },
+    "frontend": {
+      "path": "/home/aidan/repos/home-assistant/frontend",
+      "description": "Home Assistant frontend (Lit and TypeScript web components)"
+    },
+    "docs": {
+      "path": "/home/aidan/repos/home-assistant/home-assistant.io",
+      "description": "Home Assistant user documentation (home-assistant.io source)"
+    },
+    "contributors": {
+      "path": "/home/aidan/repos/home-assistant/contributors.home-assistant.io",
+      "description": "Home Assistant contributor docs (contributors.home-assistant.io, replacing the developer, design and data sites): Core and integrations, frontend, apps, design, architecture, glossary, and the developer blog"
+    },
+    "brands": {
+      "path": "/home/aidan/repos/home-assistant/brands",
+      "description": "Home Assistant brand icons and logos"
+    },
+    "supervisor": {
+      "path": "/home/aidan/repos/home-assistant/supervisor",
+      "description": "Home Assistant Supervisor: add-on and OS management backend"
+    },
+    "cli": {
+      "path": "/home/aidan/repos/home-assistant/cli",
+      "description": "Home Assistant CLI"
+    },
+    "android": {
+      "path": "/home/aidan/repos/home-assistant/android",
+      "description": "Home Assistant Android app source"
+    }
+  },
+  "skills": [
+    "/home/aidan/repos/home-assistant/workspace-config/workspace/skills"
+  ]
+}
