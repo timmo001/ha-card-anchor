@@ -1,0 +1,44 @@
+# Pinned tools and tasks for the card: install, lint, format, build and the
+# pre-push hook's linters. CI runs the shared workflows; the hk pre-push hook
+# runs the shared lints.
+min_version = "2025.1.0"
+
+[tools]
+node = "26.13.1"
+pnpm = "12.21.0"
+hk = "2.12.0"
+# The linters the shared hk pre-push hook runs, matching CI.
+uv = "0.13.8"
+python = "3.15.2"
+"pipx:yamllint" = "1.38.0"
+"npm:markdownlint-cli2" = "0.24.1"
+actionlint = "1.7.12"
+shellcheck = "0.11.0"
+
+[tasks.install]
+description = "Install dependencies"
+run = "pnpm install --frozen-lockfile"
+
+[tasks.lint]
+description = "Lint the card with the shared Oxlint rules"
+depends = ["install"]
+run = "pnpm lint"
+
+[tasks."format:check"]
+description = "Check formatting without writing"
+depends = ["install"]
+run = "pnpm exec prettier --check ."
+
+[tasks.format]
+description = "Format the repository"
+depends = ["install"]
+run = "pnpm format"
+
+[tasks.build]
+description = "Build dist/ha-card-anchor.js"
+depends = ["install"]
+run = "pnpm build"
+
+[tasks.check]
+description = "Lint, check formatting and build"
+depends = ["lint", "format:check", "build"]
